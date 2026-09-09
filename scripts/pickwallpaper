@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+export HT_QUIET=1
+set -eu
+
+# Guarantee valid file descriptors even if launched from Waybar/GUI with closed/broken stdio
+if [[ ! -t 0 ]]; then exec 0</dev/null; fi
+if [[ ! -t 1 ]]; then exec 1>/dev/null; fi
+if [[ ! -t 2 ]]; then exec 2>/dev/null; fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DARK_DIR="$CONFIG_DIR/wallpapers/dark"
+LIGHT_DIR="$CONFIG_DIR/wallpapers/light"
+STATUS_FILE="$CONFIG_DIR/mode"
+SET_WALLPAPER="$SCRIPT_DIR/setwallpaper"
+
+if [[ -n "${1:-}" ]]; then
+    WALLPAPER_DIR="$1"
+else
+    MODE="light"
+    if [[ -f "$STATUS_FILE" ]]; then
+        MODE="$(cat "$STATUS_FILE")"
+    fi
+
+    if [[ "$MODE" == "dark" ]]; then
+        WALLPAPER_DIR="$DARK_DIR"
+    else
+        WALLPAPER_DIR="$LIGHT_DIR"
+    fi
+fi
+
+NOTIFY_ICON=1
+NOTIFY_COLOR="rgb(ffffff)"
+NOTIFY_MSG=""
+
+if [[ ! -d "$WALLPAPER_DIR" ]]; then
+    NOTIFY_ICON=2
+    NOTIFY_COLOR="rgb(ff5555)"
+    NOTIFY_MSG="Wallpaper Error: Directory not found: $WALLPAPER_DIR"
+else
+    # Step 1: Pick wallpaper using miqulauncher in dmenu mode
+    wallpapers=()
+    while IFS= read -r -d $'\0' f; do
+        wallpapers+=("$(basename "$f")")
+    done < <(find "$WALLPAPER_DIR" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) -print0 | sort -z)
+
+    if [[ ${#wallpapers[@]} -eq 0 ]]; then
+        NOTIFY_ICON=2
+        NOTIFY_COLOR="rgb(ff5555)"
+        NOTIFY_MSG="Wallpaper Error: No image files found in $WALLPAPER_DIR"
+    else
+        CHOSEN_WALLPAPER=$(printf "%s\n" "${wallpapers[@]}" | miqulauncher -dmenu -p "Select Wallpaper" || true)
+
+        if [[ -n "${CHOSEN_WALLPAPER:-}" && -f "$WALLPAPER_DIR/$CHOSEN_WALLPAPER" ]]; then
+            SELECTED_WALLPAPER="$WALLPAPER_DIR/$CHOSEN_WALLPAPER"
+
+            # Step 2: Pick fit mode supported by miqubg (fill, fit, stretch, center, tile)
+            FIT_TYPE=$(printf "%s\n" "fill" "fit" "stretch" "center" "tile" | miqulauncher -dmenu -p "Select Fit Mode" || true)
+
+            if [[ -n "${FIT_TYPE:-}" && "$FIT_TYPE" != "null" ]]; then
+                FIT_TYPE_LOWER=$(echo "$FIT_TYPE" | tr '[:upper:]' '[:lower:]')
+                "$SET_WALLPAPER" "$SELECTED_WALLPAPER" "$FIT_TYPE_LOWER"
+                NOTIFY_ICON=4
+                NOTIFY_COLOR="rgb(50fa7b)"
+                NOTIFY_MSG="Wallpaper Changed: $(basename "$SELECTED_WALLPAPER") ($FIT_TYPE_LOWER)"
+            else
+                NOTIFY_ICON=1
+                NOTIFY_COLOR="rgb(f1fa8c)"
+                NOTIFY_MSG="Wallpaper Cancelled: No fit type selected"
+            fi
+        else
+            NOTIFY_ICON=1
+            NOTIFY_COLOR="rgb(f1fa8c)"
+            NOTIFY_MSG="Wallpaper Cancelled: No wallpaper selected"
+        fi
+    fi
+fi
+
+if command -v dunstify >/dev/null 2>&1; then
+    dunstify -t 2500 -i preferences-desktop-wallpaper "Wallpaper Selection" "$NOTIFY_MSG"
+elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -t 2500 -i preferences-desktop-wallpaper "Wallpaper Selection" "$NOTIFY_MSG"
+fi
+

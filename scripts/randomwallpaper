@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+set -eu
+
+# Guarantee valid file descriptors even if launched from Waybar/GUI with closed/broken stdio
+if [[ ! -t 0 ]]; then exec 0</dev/null; fi
+if [[ ! -t 1 ]]; then exec 1>/dev/null; fi
+if [[ ! -t 2 ]]; then exec 2>/dev/null; fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+STATUS_FILE="$CONFIG_DIR/mode"
+SET_WALLPAPER="$SCRIPT_DIR/setwallpaper"
+
+MODE="light"
+if [[ -f "$STATUS_FILE" ]]; then
+    MODE="$(cat "$STATUS_FILE")"
+fi
+
+if [[ "$MODE" == "dark" ]]; then
+    WALLPAPER_DIR="$CONFIG_DIR/wallpapers/dark"
+else
+    WALLPAPER_DIR="$CONFIG_DIR/wallpapers/light"
+fi
+
+if [[ ! -d "$WALLPAPER_DIR" ]]; then
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -u critical -i dialog-error "Random Wallpaper Error" "Directory not found: $WALLPAPER_DIR"
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -u critical -i dialog-error "Random Wallpaper Error" "Directory not found: $WALLPAPER_DIR"
+    fi
+    exit 1
+fi
+
+
+RANDOM_WP=$(find "$WALLPAPER_DIR" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) 2>/dev/null | shuf -n 1 || true)
+
+if [[ -z "$RANDOM_WP" || ! -f "$RANDOM_WP" ]]; then
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -u critical -i dialog-error "Random Wallpaper Error" "No wallpapers found in $WALLPAPER_DIR"
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -u critical -i dialog-error "Random Wallpaper Error" "No wallpapers found in $WALLPAPER_DIR"
+    fi
+    exit 1
+fi
+
+
+# Set wallpaper as cover
+"$SET_WALLPAPER" "$RANDOM_WP" "cover"
+
+if command -v dunstify >/dev/null 2>&1; then
+    dunstify -t 2500 -i preferences-desktop-wallpaper "Random Wallpaper (${MODE^})" "$(basename "$RANDOM_WP")"
+elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -t 2500 -i preferences-desktop-wallpaper "Random Wallpaper (${MODE^})" "$(basename "$RANDOM_WP")"
+fi
+

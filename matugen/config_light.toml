@@ -1,0 +1,26 @@
+[config]
+
+[templates.kitty]
+input_path = '~/.config/theme/matugen/templates/kitty_light.conf'
+output_path = '~/.config/theme/schemes/light/dynamic-matugen/kitty.conf'
+
+[templates.waybar]
+input_path = '~/.config/theme/matugen/templates/waybar.css'
+output_path = '~/.config/theme/schemes/light/dynamic-matugen/waybar.css'
+
+[templates.yazi]
+input_path = '~/.config/theme/matugen/templates/yazi.toml'
+output_path = '~/.config/theme/schemes/light/dynamic-matugen/yazi.toml'
+
+[templates.dunst]
+input_path = '~/.config/theme/matugen/templates/dunst.conf'
+output_path = '~/.config/theme/schemes/light/dynamic-matugen/dunst.conf'
+
+[templates.gtk]
+input_path = '~/.config/theme/matugen/templates/gtk.css'
+output_path = '~/.config/theme/schemes/light/dynamic-matugen/gtk.css'
+
+[templates.miqulauncher]
+input_path = '~/.config/theme/matugen/templates/miqulauncher.conf'
+output_path = '~/.config/theme/schemes/light/dynamic-matugen/miqulauncher.conf'
+

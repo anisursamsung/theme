@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:$PATH"
+
+# Guarantee valid file descriptors even if launched from Waybar/GUI with closed/broken stdio
+if [[ ! -t 0 ]]; then exec 0</dev/null; fi
+if [[ ! -t 1 ]]; then exec 1>/dev/null; fi
+if [[ ! -t 2 ]]; then exec 2>/dev/null; fi
+
+# Config location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+WALLPAPER_FILE="$CONFIG_DIR/current/wallpaper"
+IMAGE_PATH="${1:-}"
+FIT_MODE="${2:-}"
+MODE="${3:-}"
+
+if [[ -z "$MODE" ]]; then
+    if [[ -f "$CONFIG_DIR/mode" ]]; then
+        MODE="$(cat "$CONFIG_DIR/mode")"
+    else
+        MODE="dark"
+    fi
+fi
+
+# If no image path is provided, restore active or mode-specific wallpaper
+if [[ -z "$IMAGE_PATH" ]]; then
+    if [[ -f "$CONFIG_DIR/current/wallpaper_${MODE}" ]]; then
+        IMAGE_PATH=$(cat "$CONFIG_DIR/current/wallpaper_${MODE}" | tr -d '\r\n' || true)
+    fi
+    if [[ -z "$IMAGE_PATH" || ! -f "$IMAGE_PATH" ]] && [[ -f "$CONFIG_DIR/default_${MODE}_wallpaper.png" ]]; then
+        IMAGE_PATH="$CONFIG_DIR/default_${MODE}_wallpaper.png"
+    fi
+    if [[ -z "$IMAGE_PATH" || ! -f "$IMAGE_PATH" ]]; then
+        IMAGE_PATH=$(find "$CONFIG_DIR/wallpapers/$MODE" -type f 2>/dev/null | head -n 1 || true)
+    fi
+    if [[ -z "$IMAGE_PATH" || ! -f "$IMAGE_PATH" ]] && [[ -f "$WALLPAPER_FILE" ]]; then
+        IMAGE_PATH=$(cat "$WALLPAPER_FILE" | tr -d '\r\n' || true)
+    fi
+    if [[ -z "$FIT_MODE" && -f "$CONFIG_DIR/current/wallpaper_fit" ]]; then
+        FIT_MODE=$(cat "$CONFIG_DIR/current/wallpaper_fit" | tr -d '\r\n' || true)
+    fi
+fi
+FIT_MODE="${FIT_MODE:-fill}"
+
+# Validate inputs
+if [[ -z "$IMAGE_PATH" || ! -f "$IMAGE_PATH" ]]; then
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -u critical -i dialog-error "Wallpaper Error" "Wallpaper file not found: $IMAGE_PATH"
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -u critical -i dialog-error "Wallpaper Error" "Wallpaper file not found: $IMAGE_PATH"
+    fi
+    exit 1
+fi
+
+# Map fit mode for miqubg (fill/cover, fit/contain, stretch, center, tile)
+case "$FIT_MODE" in
+    fill|cover) MIQU_MODE="fill" ;;
+    fit|contain) MIQU_MODE="fit" ;;
+    stretch) MIQU_MODE="stretch" ;;
+    center) MIQU_MODE="center" ;;
+    tile) MIQU_MODE="tile" ;;
+    *) MIQU_MODE="fill" ;;
+esac
+
+# ==========================================
+# 1. Apply wallpaper on the fly with miqubg
+# ==========================================
+mkdir -p "$(dirname "$WALLPAPER_FILE")"
+
+# Gracefully terminate previous wallpaper instances and ensure layer surfaces are released
+killall -q miqubg swaybg 2>/dev/null || true
+for _ in {1..20}; do
+    if ! pgrep -x "miqubg|swaybg" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 0.05
+done
+
+# Launch miqubg immune to SIGHUP and fully detached from the calling session
+setsid nohup miqubg -i "$IMAGE_PATH" -m "$MIQU_MODE" >/dev/null 2>&1 &
+disown
+
+# ==========================================
+# 2. Record active wallpaper
+# ==========================================
+echo "$IMAGE_PATH" > "$WALLPAPER_FILE"
+echo "$IMAGE_PATH" > "$CONFIG_DIR/current/wallpaper_${MODE}"
+echo "$FIT_MODE" > "$CONFIG_DIR/current/wallpaper_fit"
+
+# Trigger matugen if current scheme is dynamic-matugen (and not called recursively from toggledarkmode)
+if [[ -z "${HT_INSIDE_TOGGLE:-}" ]]; then
+    scheme_state_file="$CONFIG_DIR/current_${MODE}"
+    if [[ -f "$scheme_state_file" && "$(<"$scheme_state_file")" == "dynamic-matugen" ]]; then
+        "$CONFIG_DIR/scripts/toggledarkmode" set dynamic-matugen || true
+    fi
+fi
+
+if command -v dunstify >/dev/null 2>&1; then
+    dunstify -t 2500 -i preferences-desktop-wallpaper "Wallpaper Applied" "$(basename "$IMAGE_PATH") ($MIQU_MODE)"
+elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -t 2500 -i preferences-desktop-wallpaper "Wallpaper Applied" "$(basename "$IMAGE_PATH") ($MIQU_MODE)"
+fi

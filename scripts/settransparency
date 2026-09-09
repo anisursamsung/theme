@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+set -eu
+
+# Guarantee valid file descriptors even if launched from Waybar/GUI with closed/broken stdio
+if [[ ! -t 0 ]]; then exec 0</dev/null; fi
+if [[ ! -t 1 ]]; then exec 1>/dev/null; fi
+if [[ ! -t 2 ]]; then exec 2>/dev/null; fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+TRANSPARENCY_FILE="$CONFIG_DIR/transparency"
+CURRENT_DIR="$CONFIG_DIR/current"
+MODE_FILE="$CONFIG_DIR/mode"
+
+mkdir -p "$CONFIG_DIR"
+mkdir -p "$CURRENT_DIR"
+
+input_val="${1:-}"
+
+if [[ -n "$input_val" ]]; then
+    val="${input_val//[!0-9]/}"
+else
+    if [[ -f "$TRANSPARENCY_FILE" ]]; then
+        file_val=$(<"$TRANSPARENCY_FILE")
+        val="${file_val//[!0-9]/}"
+    else
+        val="75"
+    fi
+fi
+
+# Sanitize val to integer 0-100
+if ! [[ "$val" =~ ^[0-9]+$ ]]; then
+    val=75
+fi
+if (( val < 0 )); then val=0; fi
+if (( val > 100 )); then val=100; fi
+
+# Save normalized preference
+echo "${val}%" > "$TRANSPARENCY_FILE"
+
+# Calculate Opacity Decimal (e.g. 0.75) and Hex Alpha (e.g. BF)
+opacity_dec=$(awk "BEGIN {printf \"%.2f\", $val/100}")
+if [[ "$val" -eq 100 ]]; then
+    opacity_dec="1.0"
+elif [[ "$val" -eq 0 ]]; then
+    opacity_dec="0.0"
+fi
+
+# Waybar minimal opacity clamp: don't allow 0.0 (full transparent), use at least 0.01 (1%)
+waybar_opacity="$opacity_dec"
+if [[ "$val" -lt 1 ]]; then
+    waybar_opacity="0.01"
+fi
+
+alpha_int=$(( (val * 255 + 50) / 100 ))
+alpha_hex=$(printf "%02X" "$alpha_int")
+
+if [[ -t 1 ]]; then
+    echo "Setting transparency: ${val}% (decimal: ${opacity_dec}, waybar: ${waybar_opacity}, hex alpha: 0x${alpha_hex})"
+fi
+
+# 1. Kitty Terminal
+KITTY_CUR="$CURRENT_DIR/kitty.conf"
+if [[ -f "$KITTY_CUR" ]]; then
+    if grep -q "background_opacity" "$KITTY_CUR"; then
+        sed -i -E "s/^background_opacity .*/background_opacity ${opacity_dec}/" "$KITTY_CUR"
+    else
+        echo "" >> "$KITTY_CUR"
+        echo "background_opacity ${opacity_dec}" >> "$KITTY_CUR"
+    fi
+fi
+
+if pgrep -x "kitty" > /dev/null; then
+    killall -SIGUSR1 kitty || true
+fi
+
+# 2. Waybar Pills (minimum opacity 0.01 to prevent full transparency)
+WAYBAR_CUR="$CURRENT_DIR/waybar.css"
+if [[ -f "$WAYBAR_CUR" ]]; then
+    if grep -q "alpha(" "$WAYBAR_CUR"; then
+        sed -i -E "s/alpha\((#[0-9a-fA-F]{6}),[[:space:]]*[0-9\.]+\)/alpha(\1, ${waybar_opacity})/g" "$WAYBAR_CUR"
+    elif grep -q "@define-color bg-color" "$WAYBAR_CUR"; then
+        sed -i -E "s/@define-color bg-color (#[0-9a-fA-F]{6});/@define-color bg-color alpha(\1, ${waybar_opacity});/g" "$WAYBAR_CUR"
+    fi
+fi
+
+# 3. Dunst Notifications
+DUNST_CUR="$CURRENT_DIR/dunst.conf"
+if [[ -f "$DUNST_CUR" ]]; then
+    sed -i -E "s/background = \"(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}\"/background = \"\1${alpha_hex}\"/g" "$DUNST_CUR"
+fi
+
+DUNST_DIR="$HOME/.config/dunst"
+if command -v dunstctl >/dev/null 2>&1 && pgrep -x "dunst" >/dev/null; then
+    dunstctl reload "$DUNST_DIR/dunstrc" "$DUNST_DIR/dunstrc.d/theme.conf" || true
+elif systemctl --user is-active dunst >/dev/null 2>&1; then
+    systemctl --user restart dunst || true
+elif pgrep -x "dunst" > /dev/null; then
+    killall -9 dunst 2>/dev/null || true
+    sleep 0.1
+    dunst >/dev/null 2>&1 &
+fi
+
+# 4. GTK 3 & GTK 4
+GTK_CUR="$CURRENT_DIR/gtk.css"
+if [[ -f "$GTK_CUR" ]]; then
+    sed -i -E "s/alpha\((#[0-9a-fA-F]{6}),[[:space:]]*[0-9\.]+\)/alpha(\1, ${opacity_dec})/g" "$GTK_CUR"
+fi
+touch "$HOME/.config/gtk-3.0/gtk.css" "$HOME/.config/gtk-4.0/gtk.css" 2>/dev/null || true
+
+# 5. miqulauncher Card Background
+MIQULAUNCHER_CUR="$CURRENT_DIR/miqulauncher.conf"
+if [[ -f "$MIQULAUNCHER_CUR" ]]; then
+    if [[ "$val" -eq 100 ]]; then
+        sed -i -E "s/^(background[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2/" "$MIQULAUNCHER_CUR"
+    else
+        sed -i -E "s/^(background[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2${alpha_hex}/" "$MIQULAUNCHER_CUR"
+    fi
+fi
+
+# Notification
+msg="Transparency set to ${val}%"
+if command -v dunstify >/dev/null 2>&1; then
+    dunstify -t 2500 -h string:x-dunst-stack-tag:theme_notify -i preferences-system-windows "Theme Engine" "$msg"
+elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -t 2500 -i preferences-system-windows "Theme Engine" "$msg"
+fi
+
+# 6. Reload Waybar (deferred in background so caller script exits cleanly)
+if pgrep -x "waybar" > /dev/null; then
+    (sleep 0.1 && killall -SIGUSR2 waybar) >/dev/null 2>&1 &
+fi
+

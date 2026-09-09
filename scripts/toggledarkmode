@@ -1,0 +1,309 @@
+#!/usr/bin/env bash
+
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+set -eu
+export HT_INSIDE_TOGGLE=1
+
+# Guarantee valid file descriptors even if launched from Waybar/GUI with closed/broken stdio
+if [[ ! -t 0 ]]; then exec 0</dev/null; fi
+if [[ ! -t 1 ]]; then exec 1>/dev/null; fi
+if [[ ! -t 2 ]]; then exec 2>/dev/null; fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+MODE_FILE="$CONFIG_DIR/mode"
+DARK_SCHEME_FILE="$CONFIG_DIR/current_dark"
+LIGHT_SCHEME_FILE="$CONFIG_DIR/current_light"
+
+CURRENT_DIR="$CONFIG_DIR/current"
+KITTY_THEME_CONF="$CURRENT_DIR/kitty.conf"
+WAYBAR_THEME_CONF="$CURRENT_DIR/waybar.css"
+YAZI_THEME_CONF="$CURRENT_DIR/yazi.toml"
+DUNST_DIR="$HOME/.config/dunst"
+DUNST_THEME_CONF="$CURRENT_DIR/dunst.conf"
+GTK_THEME_CONF="$CURRENT_DIR/gtk.css"
+MIQULAUNCHER_THEME_CONF="$CURRENT_DIR/miqulauncher.conf"
+
+mkdir -p "$CONFIG_DIR"
+mkdir -p "$CURRENT_DIR"
+mkdir -p "$DUNST_DIR/dunstrc.d"
+mkdir -p "$HOME/.config/kitty"
+mkdir -p "$HOME/.config/yazi"
+mkdir -p "$HOME/.config/miqulauncher"
+mkdir -p "$HOME/.config/gtk-3.0"
+mkdir -p "$HOME/.config/gtk-4.0"
+
+# Initialize state files if missing
+if [[ ! -f "$MODE_FILE" ]]; then
+    echo "dark" > "$MODE_FILE"
+fi
+if [[ ! -f "$DARK_SCHEME_FILE" ]]; then
+    echo "warm-charcoal" > "$DARK_SCHEME_FILE"
+fi
+if [[ ! -f "$LIGHT_SCHEME_FILE" ]]; then
+    echo "warm-light" > "$LIGHT_SCHEME_FILE"
+fi
+
+current_mode=$(<"$MODE_FILE")
+current_dark=$(<"$DARK_SCHEME_FILE")
+current_light=$(<"$LIGHT_SCHEME_FILE")
+
+action="${1:-toggle}"
+
+case "$action" in
+    dark)
+        target_mode="dark"
+        target_scheme="$current_dark"
+        ;;
+    light)
+        target_mode="light"
+        target_scheme="$current_light"
+        ;;
+    toggle)
+        if [[ "$current_mode" == "dark" ]]; then
+            target_mode="light"
+            target_scheme="$current_light"
+        else
+            target_mode="dark"
+            target_scheme="$current_dark"
+        fi
+        ;;
+    set)
+        specified_scheme="${2:-}"
+        specified_matugen_type="${3:-}"
+        if [[ -z "$specified_scheme" ]]; then
+            echo "Usage: $(basename "$0") set <scheme_name> [matugen_type]"
+            exit 1
+        fi
+        if [[ -n "$specified_matugen_type" ]]; then
+            echo "$specified_matugen_type" > "$CONFIG_DIR/matugen_type"
+        fi
+        if [[ -d "$CONFIG_DIR/schemes/$current_mode/$specified_scheme" ]]; then
+            target_mode="$current_mode"
+            target_scheme="$specified_scheme"
+        elif [[ "$current_mode" == "light" && -d "$CONFIG_DIR/schemes/dark/$specified_scheme" ]]; then
+            target_mode="dark"
+            target_scheme="$specified_scheme"
+        elif [[ "$current_mode" == "dark" && -d "$CONFIG_DIR/schemes/light/$specified_scheme" ]]; then
+            target_mode="light"
+            target_scheme="$specified_scheme"
+        else
+            echo "Error: Scheme '$specified_scheme' not found."
+            exit 1
+        fi
+        ;;
+    status)
+        echo "Mode: $current_mode"
+        echo "Dark Scheme: $current_dark"
+        echo "Light Scheme: $current_light"
+        exit 0
+        ;;
+    *)
+        echo "Usage: $(basename "$0") [dark|light|toggle|status|set <scheme>]"
+        exit 1
+        ;;
+esac
+
+# Save mode & scheme state early
+echo "$target_mode" > "$MODE_FILE"
+if [[ "$target_mode" == "dark" ]]; then
+    echo "$target_scheme" > "$DARK_SCHEME_FILE"
+else
+    echo "$target_scheme" > "$LIGHT_SCHEME_FILE"
+fi
+
+get_active_wallpaper() {
+    local mode="$1"
+    local wp=""
+    if [[ -f "$CONFIG_DIR/current/wallpaper_${mode}" ]]; then
+        wp=$(cat "$CONFIG_DIR/current/wallpaper_${mode}" | tr -d '\r\n' || true)
+    fi
+    if [[ -z "$wp" || ! -f "$wp" ]] && [[ -f "$CONFIG_DIR/default_${mode}_wallpaper.png" ]]; then
+        wp="$CONFIG_DIR/default_${mode}_wallpaper.png"
+    fi
+    if [[ -z "$wp" || ! -f "$wp" ]]; then
+        wp=$(find "$CONFIG_DIR/wallpapers/$mode" -type f 2>/dev/null | head -n 1 || true)
+    fi
+    if [[ -z "$wp" || ! -f "$wp" ]] && [[ -f "$CONFIG_DIR/current/wallpaper" ]]; then
+        wp=$(cat "$CONFIG_DIR/current/wallpaper" | tr -d '\r\n' || true)
+    fi
+    echo "$wp"
+}
+
+get_wallpaper_fit() {
+    local fit="fill"
+    if [[ -f "$CONFIG_DIR/current/wallpaper_fit" ]]; then
+        fit=$(cat "$CONFIG_DIR/current/wallpaper_fit" | tr -d '\r\n' || true)
+    fi
+    [[ -z "$fit" ]] && fit="fill"
+    echo "$fit"
+}
+
+# Apply wallpaper when switching modes (dark <-> light)
+if [[ "$target_mode" != "$current_mode" ]]; then
+    target_wp=$(get_active_wallpaper "$target_mode")
+    target_fit=$(get_wallpaper_fit)
+    if [[ -f "$target_wp" && -x "$CONFIG_DIR/scripts/setwallpaper" ]]; then
+        "$CONFIG_DIR/scripts/setwallpaper" "$target_wp" "$target_fit" "$target_mode" || true
+    fi
+fi
+
+# Check if target scheme is dynamic-matugen and regenerate using active wallpaper
+if [[ "$target_scheme" == "dynamic-matugen" ]] && command -v matugen >/dev/null 2>&1; then
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -t 2500 -h string:x-dunst-stack-tag:theme_notify -i preferences-desktop-theme "Theme Engine" "Generating Material 3 color palette..."
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -t 2500 -i preferences-desktop-theme "Theme Engine" "Generating Material 3 color palette..."
+    fi
+
+    cur_wp=$(get_active_wallpaper "$target_mode")
+    matugen_cfg="$CONFIG_DIR/matugen/config_${target_mode}.toml"
+    matugen_type="scheme-tonal-spot"
+    if [[ "$target_mode" == "light" ]]; then
+        matugen_type="scheme-expressive"
+    fi
+    if [[ -f "$CONFIG_DIR/matugen_type" ]]; then
+        saved_type=$(cat "$CONFIG_DIR/matugen_type" 2>/dev/null || true)
+        [[ -n "$saved_type" ]] && matugen_type="$saved_type"
+    fi
+
+    flags="-t $matugen_type --source-color-index 0"
+    if [[ "$target_mode" == "light" ]]; then
+        flags="-t $matugen_type --prefer saturation --contrast 0.6 --source-color-index 0"
+    fi
+
+    if [[ -n "${cur_wp:-}" && -f "$cur_wp" && -f "$matugen_cfg" ]]; then
+        sleep 0.2
+        target_img="$cur_wp"
+        if [[ "$cur_wp" != *.* ]]; then
+            target_img="/tmp/matugen_temp_wallpaper.png"
+            cp "$cur_wp" "$target_img"
+        fi
+
+        matugen_out=$(matugen image "$target_img" -c "$matugen_cfg" $flags -m "$target_mode" 2>&1)
+        matugen_status=$?
+
+        if [[ $matugen_status -eq 0 ]]; then
+            if command -v dunstify >/dev/null 2>&1; then
+                dunstify -t 2500 -h string:x-dunst-stack-tag:theme_notify -i preferences-desktop-theme "Theme Engine" "Material 3 palette generated successfully!"
+            elif command -v notify-send >/dev/null 2>&1; then
+                notify-send -t 2500 -i preferences-desktop-theme "Theme Engine" "Material 3 palette generated successfully!"
+            fi
+        else
+            echo "Matugen error: $matugen_out" >&2
+            if command -v dunstify >/dev/null 2>&1; then
+                dunstify -t 3500 -u critical -i dialog-error "Matugen Error" "Failed to generate colors:\n$matugen_out"
+            elif command -v notify-send >/dev/null 2>&1; then
+                notify-send -t 3500 -u critical -i dialog-error "Matugen Error" "Failed to generate colors:\n$matugen_out"
+            fi
+        fi
+    fi
+fi
+
+SCHEME_DIR="$CONFIG_DIR/schemes/$target_mode/$target_scheme"
+
+if [[ ! -d "$SCHEME_DIR" ]]; then
+    echo "Error: Scheme directory '$SCHEME_DIR' does not exist."
+    exit 1
+fi
+
+# 1. Apply Kitty theme
+KITTY_CONF="$SCHEME_DIR/kitty.conf"
+if [[ -f "$KITTY_CONF" ]]; then
+    cp "$KITTY_CONF" "$KITTY_THEME_CONF"
+fi
+
+# 2. Apply Waybar theme
+WAYBAR_CSS="$SCHEME_DIR/waybar.css"
+if [[ -f "$WAYBAR_CSS" ]]; then
+    cp "$WAYBAR_CSS" "$WAYBAR_THEME_CONF"
+fi
+
+# 3. Apply Yazi theme
+YAZI_TOML="$SCHEME_DIR/yazi.toml"
+if [[ -f "$YAZI_TOML" ]]; then
+    cp "$YAZI_TOML" "$YAZI_THEME_CONF"
+    ln -sf "$YAZI_THEME_CONF" "$HOME/.config/yazi/theme.toml"
+fi
+
+# 4. Apply Dunst theme
+DUNST_CONF="$SCHEME_DIR/dunst.conf"
+if [[ -f "$DUNST_CONF" ]]; then
+    cp "$DUNST_CONF" "$DUNST_THEME_CONF"
+    mkdir -p "$DUNST_DIR/dunstrc.d"
+    ln -sf "$DUNST_THEME_CONF" "$DUNST_DIR/dunstrc.d/theme.conf"
+    if command -v dunstctl >/dev/null 2>&1 && pgrep -x "dunst" >/dev/null; then
+        dunstctl reload "$HOME/.config/dunst/dunstrc" "$DUNST_DIR/dunstrc.d/theme.conf" || true
+    elif systemctl --user is-active dunst >/dev/null 2>&1; then
+        systemctl --user restart dunst || true
+    fi
+fi
+
+# 5. Apply GTK theme
+GTK_CSS="$SCHEME_DIR/gtk.css"
+if [[ -f "$GTK_CSS" ]]; then
+    cp "$GTK_CSS" "$GTK_THEME_CONF"
+    ln -sf "$GTK_THEME_CONF" "$HOME/.config/gtk-3.0/colors.css"
+    ln -sf "$GTK_THEME_CONF" "$HOME/.config/gtk-4.0/colors.css"
+fi
+
+# 6. Apply miqulauncher theme
+MIQULAUNCHER_CONF="$SCHEME_DIR/miqulauncher.conf"
+if [[ -f "$MIQULAUNCHER_CONF" ]]; then
+    cp "$MIQULAUNCHER_CONF" "$MIQULAUNCHER_THEME_CONF"
+fi
+
+if [[ "$target_mode" == "dark" ]]; then
+    gtk_theme="Adwaita-dark"
+    gtk_color_scheme="prefer-dark"
+    icon_theme="Papirus-Dark"
+else
+    gtk_theme="Adwaita"
+    gtk_color_scheme="prefer-light"
+    icon_theme="Papirus-Light"
+fi
+
+# Apply GTK theme via gsettings (forces live GTK3 & GTK4 stylesheet reload)
+if command -v gsettings >/dev/null 2>&1; then
+    gsettings set org.gnome.desktop.interface gtk-theme "" || true
+    sleep 0.02
+    gsettings set org.gnome.desktop.interface gtk-theme "$gtk_theme" || true
+    gsettings set org.gnome.desktop.interface icon-theme "$icon_theme" || true
+
+    # Pulse opposite color-scheme briefly to force Libadwaita / GTK4 apps (Nautilus, etc.) to re-parse colors.css
+    if gsettings writable org.gnome.desktop.interface color-scheme >/dev/null 2>&1; then
+        if [[ "$gtk_color_scheme" == "prefer-dark" ]]; then
+            gsettings set org.gnome.desktop.interface color-scheme "prefer-light" || true
+            sleep 0.05
+            gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" || true
+        else
+            gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" || true
+            sleep 0.05
+            gsettings set org.gnome.desktop.interface color-scheme "prefer-light" || true
+        fi
+    fi
+
+    # Refresh running nm-applet so it reloads panel icon assets
+    if pgrep -x "nm-applet" >/dev/null 2>&1; then
+        (killall -q nm-applet; sleep 0.2; nm-applet >/dev/null 2>&1 &) || true
+    fi
+fi
+
+# 6. Apply Transparency & Reload Apps (Single Source of Truth)
+if [[ -x "$CONFIG_DIR/scripts/settransparency" ]]; then
+    "$CONFIG_DIR/scripts/settransparency" || true
+fi
+
+# 7. Send notification
+disp_scheme="$target_scheme"
+if [[ "$target_scheme" == "dynamic-matugen" && -f "$CONFIG_DIR/matugen_type" ]]; then
+    saved_type=$(cat "$CONFIG_DIR/matugen_type" 2>/dev/null || true)
+    [[ -n "$saved_type" ]] && disp_scheme="dynamic-matugen ($saved_type)"
+fi
+
+if command -v dunstify >/dev/null 2>&1; then
+    dunstify -t 2500 -h string:x-dunst-stack-tag:theme_notify -u normal -i preferences-desktop-theme "Theme Changed" "Mode: ${target_mode^}\nScheme: $disp_scheme"
+elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -t 2500 -u normal -i preferences-desktop-theme "Theme Changed" "Mode: ${target_mode^}\nScheme: $disp_scheme"
+fi
+

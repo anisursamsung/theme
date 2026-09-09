@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+export HT_QUIET=1
+set -eu
+
+# Guarantee valid file descriptors even if launched from Waybar/GUI with closed/broken stdio
+if [[ ! -t 0 ]]; then exec 0</dev/null; fi
+if [[ ! -t 1 ]]; then exec 1>/dev/null; fi
+if [[ ! -t 2 ]]; then exec 2>/dev/null; fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+MODE_FILE="$CONFIG_DIR/mode"
+TOGGLE_SCRIPT="$SCRIPT_DIR/toggledarkmode"
+
+mkdir -p "$CONFIG_DIR"
+
+mode="dark"
+if [[ -f "$MODE_FILE" ]]; then
+    mode="$(cat "$MODE_FILE")"
+fi
+
+schemes_list=()
+for d in "$CONFIG_DIR/schemes/$mode"/*/; do
+    if [[ -d "$d" ]]; then
+        sname="$(basename "$d")"
+        schemes_list+=("$sname")
+    fi
+done
+
+sel_label=$(printf "%s\n" "${schemes_list[@]}" | miqulauncher -dmenu -p "Select Color Scheme" || true)
+if [[ -n "${sel_label:-}" && -d "$CONFIG_DIR/schemes/$mode/$sel_label" ]]; then
+    selected_scheme="$sel_label"
+
+    selected_type=""
+    if [[ "$selected_scheme" == "dynamic-matugen" ]]; then
+        declare -A type_map
+        type_map["Vibrant"]="scheme-vibrant"
+        type_map["Tonal Spot"]="scheme-tonal-spot"
+        type_map["Expressive"]="scheme-expressive"
+        type_map["Fidelity"]="scheme-fidelity"
+        type_map["Fruit Salad"]="scheme-fruit-salad"
+        type_map["Rainbow"]="scheme-rainbow"
+        type_map["Neutral"]="scheme-neutral"
+        type_map["Monochrome"]="scheme-monochrome"
+        type_map["Content"]="scheme-content"
+
+        types_list=(
+            "Vibrant"
+            "Tonal Spot"
+            "Expressive"
+            "Fidelity"
+            "Fruit Salad"
+            "Rainbow"
+            "Neutral"
+            "Monochrome"
+            "Content"
+        )
+
+        sel_type_label=$(printf "%s\n" "${types_list[@]}" | miqulauncher -dmenu -p "Select Material 3 Palette" || true)
+        if [[ -z "${sel_type_label:-}" || -z "${type_map[$sel_type_label]:-}" ]]; then
+            exit 0
+        fi
+        selected_type="${type_map[$sel_type_label]}"
+    fi
+
+    notify_msg="Applying scheme: $sel_label..."
+    if [[ -n "$selected_type" ]]; then
+        notify_msg="Applying scheme: $sel_label ($selected_type)..."
+    fi
+
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -t 2500 -h string:x-dunst-stack-tag:theme_notify -i preferences-desktop-theme "Theme Engine" "$notify_msg"
+    elif command -v notify-send >/dev/null 2>&1; then
+        notify-send -t 2500 -i preferences-desktop-theme "Theme Engine" "$notify_msg"
+    fi
+
+    if [[ -n "$selected_type" ]]; then
+        "$TOGGLE_SCRIPT" set "$selected_scheme" "$selected_type"
+    else
+        "$TOGGLE_SCRIPT" set "$selected_scheme"
+    fi
+fi
+

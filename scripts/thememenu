@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+export HT_QUIET=1
+set -eu
+
+# Guarantee valid file descriptors even if launched from Waybar/GUI with closed/broken stdio
+if [[ ! -t 0 ]]; then exec 0</dev/null; fi
+if [[ ! -t 1 ]]; then exec 1>/dev/null; fi
+if [[ ! -t 2 ]]; then exec 2>/dev/null; fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+MODE_FILE="$CONFIG_DIR/mode"
+
+mkdir -p "$CONFIG_DIR"
+
+mode="dark"
+if [[ -f "$MODE_FILE" ]]; then
+    mode="$(cat "$MODE_FILE")"
+fi
+
+if [[ "$mode" == "dark" ]]; then
+    mode_option="Light"
+else
+    mode_option="Dark"
+fi
+
+chosen=$(printf "%s\n%s\n%s\n%s\n%s\n" \
+    "$mode_option" \
+    "Color Scheme" \
+    "Transparency" \
+    "Wallpaper" \
+    "Random WP" | miqulauncher -dmenu -p "Theme Menu" || true)
+
+case "${chosen:-}" in
+    *"Light"*)
+        "$SCRIPT_DIR/toggledarkmode" light
+        ;;
+    *"Dark"*)
+        "$SCRIPT_DIR/toggledarkmode" dark
+        ;;
+    *"Color Scheme"*)
+        "$SCRIPT_DIR/picktheme"
+        ;;
+    *"Transparency"*)
+        curr_val="75"
+        if [[ -f "$CONFIG_DIR/transparency" ]]; then
+            file_val=$(<"$CONFIG_DIR/transparency")
+            curr_val="${file_val//[!0-9]/}"
+        fi
+        transparency_options=(
+            "100% (Opaque)"
+            "90%"
+            "80%"
+            "75%"
+            "70%"
+            "60%"
+            "50%"
+            "40%"
+            "30%"
+            "25%"
+            "20%"
+            "10%"
+            "1% (Minimal)"
+            "0% (Transparent)"
+        )
+        val=$(printf "%s\n" "${transparency_options[@]}" | miqulauncher -dmenu -p "Select Transparency (current: ${curr_val}%):" || true)
+        if [[ -n "${val:-}" && "$val" =~ ([0-9]+) ]]; then
+            "$SCRIPT_DIR/settransparency" "${BASH_REMATCH[1]}"
+        fi
+        ;;
+    *"Random WP"*)
+        "$SCRIPT_DIR/randomwallpaper"
+        ;;
+    *"Wallpaper"*)
+        "$SCRIPT_DIR/pickwallpaper"
+        ;;
+esac
