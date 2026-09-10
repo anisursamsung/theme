@@ -23,6 +23,7 @@ DUNST_DIR="$HOME/.config/dunst"
 DUNST_THEME_CONF="$CURRENT_DIR/dunst.conf"
 GTK_THEME_CONF="$CURRENT_DIR/gtk.css"
 MIQULAUNCHER_THEME_CONF="$CURRENT_DIR/miqulauncher.conf"
+MIQUDESK_THEME_CONF="$CURRENT_DIR/miqudesk.colors"
 
 mkdir -p "$CONFIG_DIR"
 mkdir -p "$CURRENT_DIR"
@@ -30,6 +31,7 @@ mkdir -p "$DUNST_DIR/dunstrc.d"
 mkdir -p "$HOME/.config/kitty"
 mkdir -p "$HOME/.config/yazi"
 mkdir -p "$HOME/.config/miqulauncher"
+mkdir -p "$HOME/.config/miqudesk"
 mkdir -p "$HOME/.config/gtk-3.0"
 mkdir -p "$HOME/.config/gtk-4.0"
 
@@ -251,6 +253,12 @@ fi
 MIQULAUNCHER_CONF="$SCHEME_DIR/miqulauncher.conf"
 if [[ -f "$MIQULAUNCHER_CONF" ]]; then
     cp "$MIQULAUNCHER_CONF" "$MIQULAUNCHER_THEME_CONF"
+fi
+
+# 7. Apply miqudesk theme
+MIQUDESK_CONF="$SCHEME_DIR/miqudesk.colors"
+if [[ -f "$MIQUDESK_CONF" ]]; then
+    cp "$MIQUDESK_CONF" "$MIQUDESK_THEME_CONF"
 fi
 
 if [[ "$target_mode" == "dark" ]]; then

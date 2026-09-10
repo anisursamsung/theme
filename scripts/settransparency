@@ -120,6 +120,16 @@ if [[ -f "$MIQULAUNCHER_CUR" ]]; then
     fi
 fi
 
+# 6. miqudesk Card Background
+MIQUDESK_CUR="$CURRENT_DIR/miqudesk.colors"
+if [[ -f "$MIQUDESK_CUR" ]]; then
+    if [[ "$val" -eq 100 ]]; then
+        sed -i -E "s/^(@bg[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2/" "$MIQUDESK_CUR"
+    else
+        sed -i -E "s/^(@bg[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2${alpha_hex}/" "$MIQUDESK_CUR"
+    fi
+fi
+
 # Notification
 msg="Transparency set to ${val}%"
 if command -v dunstify >/dev/null 2>&1; then
@@ -132,4 +142,10 @@ fi
 if pgrep -x "waybar" > /dev/null; then
     (sleep 0.1 && killall -SIGUSR2 waybar) >/dev/null 2>&1 &
 fi
+
+# 7. Reload miqudesk interactive desktop canvas
+if pgrep -x "miqudesk" > /dev/null; then
+    killall -SIGUSR2 miqudesk >/dev/null 2>&1 || true
+fi
+
 

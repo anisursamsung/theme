@@ -24,3 +24,7 @@ output_path = '~/.config/theme/schemes/light/dynamic-matugen/gtk.css'
 input_path = '~/.config/theme/matugen/templates/miqulauncher.conf'
 output_path = '~/.config/theme/schemes/light/dynamic-matugen/miqulauncher.conf'
 
+[templates.miqudesk]
+input_path = '~/.config/theme/matugen/templates/miqudesk.colors'
+output_path = '~/.config/theme/schemes/light/dynamic-matugen/miqudesk.colors'
+

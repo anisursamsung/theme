@@ -1,0 +1,6 @@
+# miqudesk color definitions
+@bg = #EFF1F5
+@fg = #4C4F69
+@muted = #4C4F69
+@accent = #1E66F5
+@border = #4C4F69
