@@ -103,10 +103,11 @@ elif pgrep -x "dunst" > /dev/null; then
     dunst >/dev/null 2>&1 &
 fi
 
-# 4. GTK 3 & GTK 4
+# 4. GTK 3 & GTK 4 (Target surfaces & backgrounds only)
 GTK_CUR="$CURRENT_DIR/gtk.css"
 if [[ -f "$GTK_CUR" ]]; then
-    sed -i -E "s/alpha\((#[0-9a-fA-F]{6}),[[:space:]]*[0-9\.]+\)/alpha(\1, ${opacity_dec})/g" "$GTK_CUR"
+    targets="window_bg_color|theme_bg_color|view_bg_color|theme_base_color|headerbar_bg_color|headerbar_backdrop_color|sidebar_bg_color|sidebar_backdrop_color|card_bg_color"
+    sed -i -E "s/(@define-color[[:space:]]+(${targets})[[:space:]]+alpha\((#[0-9a-fA-F]{6}),)[[:space:]]*[0-9\.]+\);/\1 ${opacity_dec});/g" "$GTK_CUR"
 fi
 touch "$HOME/.config/gtk-3.0/gtk.css" "$HOME/.config/gtk-4.0/gtk.css" 2>/dev/null || true
 

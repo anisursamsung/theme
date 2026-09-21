@@ -1,72 +1,71 @@
 [manager]
-cwd = { fg = "#00394d" }
-hovered = { bg = "#d7dce0", fg = "#000000" }
-preview_hovered = { bg = "#eff3f7" }
+cwd = { fg = "#7aa2f7" }
+hovered = { bg = "#24283b", fg = "#c0caf5" }
+preview_hovered = { bg = "#16161e" }
 
-find_keyword = { fg = "#00394d", bold = true }
-find_position = { fg = "#343050", italic = true }
+find_keyword = { fg = "#e0af68", bold = true }
+find_position = { fg = "#bb9af7", italic = true }
 
-marker_copied = { fg = "#233741", bg = "#546773" }
-marker_cut = { fg = "#700005", bg = "#c32220" }
-marker_marked = { fg = "#00394d", bg = "#226c8b" }
-marker_selected = { fg = "#343050", bg = "#656184" }
+marker_copied = { fg = "#9ece6a", bg = "#223528" }
+marker_cut = { fg = "#f7768e", bg = "#3b222a" }
+marker_marked = { fg = "#7aa2f7", bg = "#202a3f" }
+marker_selected = { fg = "#e0af68", bg = "#3b3422" }
 
-tab_active = { bg = "#00394d", fg = "#ffffff", bold = true }
-tab_inactive = { bg = "#eff3f7", fg = "#272e32" }
+tab_active = { bg = "#7aa2f7", fg = "#1a1b26", bold = true }
+tab_inactive = { bg = "#16161e", fg = "#a9b1d6" }
 
-
-count_copied = { fg = "#ffffff", bg = "#546773" }
-count_cut = { fg = "#ffffff", bg = "#c32220" }
-count_selected = { fg = "#ffffff", bg = "#226c8b" }
+count_copied = { fg = "#9ece6a", bg = "#223528" }
+count_cut = { fg = "#f7768e", bg = "#3b222a" }
+count_selected = { fg = "#7aa2f7", bg = "#202a3f" }
 
 border_symbol = "│"
-border_style = { fg = "#444b50" }
+border_style = { fg = "#414868" }
 
 [status]
-normal = { bg = "#00394d", fg = "#ffffff", bold = true }
-select = { bg = "#233741", fg = "#ffffff", bold = true }
-unset = { bg = "#700005", fg = "#ffffff", bold = true }
-progress_label = { fg = "#000000", bold = true }
-progress_normal = { fg = "#00394d", bg = "#f6fafe" }
-progress_error = { fg = "#700005", bg = "#f6fafe" }
+normal = { bg = "#7aa2f7", fg = "#1a1b26", bold = true }
+select = { bg = "#bb9af7", fg = "#1a1b26", bold = true }
+unset = { bg = "#f7768e", fg = "#1a1b26", bold = true }
+progress_label = { fg = "#c0caf5", bold = true }
+progress_normal = { fg = "#7aa2f7", bg = "#1a1b26" }
+progress_error = { fg = "#f7768e", bg = "#1a1b26" }
 
 [mode]
-normal_main = { bg = "#00394d", fg = "#ffffff", bold = true }
-normal_alt = { bg = "#d7dce0", fg = "#00394d" }
-select_main = { bg = "#233741", fg = "#ffffff", bold = true }
-select_alt = { bg = "#d7dce0", fg = "#233741" }
-unset_main = { bg = "#700005", fg = "#ffffff", bold = true }
-unset_alt = { bg = "#d7dce0", fg = "#700005" }
+normal_main = { bg = "#7aa2f7", fg = "#1a1b26", bold = true }
+normal_alt = { bg = "#24283b", fg = "#7aa2f7" }
+select_main = { bg = "#bb9af7", fg = "#1a1b26", bold = true }
+select_alt = { bg = "#24283b", fg = "#bb9af7" }
+unset_main = { bg = "#f7768e", fg = "#1a1b26", bold = true }
+unset_alt = { bg = "#24283b", fg = "#f7768e" }
 
 [input]
-border = { fg = "#00394d" }
-title = { fg = "#00394d" }
-value = { fg = "#000000" }
-selected = { bg = "#226c8b" }
+border = { fg = "#7aa2f7" }
+title = { fg = "#7aa2f7" }
+value = { fg = "#c0caf5" }
+selected = { bg = "#24283b" }
 
 [select]
-border = { fg = "#00394d" }
-active = { fg = "#00394d", bold = true }
-inactive = { fg = "#272e32" }
+border = { fg = "#7aa2f7" }
+active = { fg = "#7aa2f7", bold = true }
+inactive = { fg = "#a9b1d6" }
 
 [tasks]
-border = { fg = "#00394d" }
-title = { fg = "#00394d" }
-hovered = { bg = "#d7dce0", fg = "#000000" }
+border = { fg = "#7aa2f7" }
+title = { fg = "#7aa2f7" }
+hovered = { bg = "#24283b", fg = "#c0caf5" }
 
 [which]
-mask = { bg = "#eff3f7" }
-cand = { fg = "#00394d" }
-rest = { fg = "#272e32" }
-desc = { fg = "#000000" }
-separator_style = { fg = "#444b50" }
+mask = { bg = "#16161e" }
+cand = { fg = "#7aa2f7" }
+rest = { fg = "#a9b1d6" }
+desc = { fg = "#c0caf5" }
+separator_style = { fg = "#414868" }
 
 [help]
-on = { fg = "#00394d" }
-exec = { fg = "#343050" }
-desc = { fg = "#000000" }
-hovered = { bg = "#d7dce0", bold = true }
-footer = { bg = "#f6fafe", fg = "#000000" }
+on = { fg = "#7aa2f7" }
+exec = { fg = "#bb9af7" }
+desc = { fg = "#c0caf5" }
+hovered = { bg = "#24283b", bold = true }
+footer = { bg = "#1a1b26", fg = "#c0caf5" }
 
 [filetree]
-folder = { fg = "#00394d" }
+folder = { fg = "#7aa2f7" }

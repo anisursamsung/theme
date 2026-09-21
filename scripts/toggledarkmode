@@ -253,6 +253,90 @@ if [[ -f "$MIQUTOOLKIT_CONF" ]]; then
     cp "$MIQUTOOLKIT_CONF" "$MIQUTOOLKIT_THEME_CONF"
 fi
 
+# 7. Apply Antigravity IDE theme
+GEMINI_CONF="$HOME/.gemini/config/config.json"
+if [[ -f "$GEMINI_CONF" && -f "$MIQUTOOLKIT_CONF" ]]; then
+    bg_hex=$(grep -E '^[[:space:]]*background[[:space:]]*=' "$MIQUTOOLKIT_CONF" | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]' | cut -c1-7)
+    primary_hex=$(grep -E '^[[:space:]]*primary[[:space:]]*=' "$MIQUTOOLKIT_CONF" | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]' | cut -c1-7)
+    fg_hex=$(grep -E '^[[:space:]]*(on_background|on_surface)[[:space:]]*=' "$MIQUTOOLKIT_CONF" | head -n 1 | cut -d'=' -f2 | tr -d '[:space:]' | cut -c1-7)
+
+    python3 -c "
+import json, sys, os, re, ssl, urllib.request
+
+path = '$GEMINI_CONF'
+mode = '$target_mode'
+bg = '$bg_hex'
+primary = '$primary_hex'
+fg = '$fg_hex'
+
+seed_key = 'customThemeSeedsDark' if mode == 'dark' else 'customThemeSeedsLight'
+target_theme_mode = 'THEME_MODE_DARK' if mode == 'dark' else 'THEME_MODE_LIGHT'
+
+# 1. Update config.json on disk
+try:
+    with open(path, 'r') as f:
+        cfg = json.load(f)
+    us = cfg.setdefault('userSettings', {})
+    us['themeMode'] = target_theme_mode
+    seeds = us.setdefault(seed_key, {})
+    if bg: seeds['background'] = bg
+    if primary: seeds['primary'] = primary
+    if fg: seeds['foregroundOverride'] = fg
+    with open(path, 'w') as f:
+        json.dump(cfg, f, indent=2)
+except Exception as e:
+    sys.stderr.write(f'Failed to update Antigravity theme on disk: {e}\n')
+
+# 2. Live update running Antigravity instance via Connect-RPC
+try:
+    log_path = os.path.expanduser('~/.config/Antigravity/logs/main.log')
+    if os.path.exists(log_path):
+        port, token = None, None
+        with open(log_path, 'r') as f:
+            for l in reversed(f.readlines()[-1000:]):
+                if not port and 'Port changed! Reloading all windows with URL: https://127.0.0.1:' in l:
+                    m = re.search(r':(\d+)/', l)
+                    if m: port = m.group(1)
+                if not token and '--csrf_token' in l:
+                    m = re.search(r'--csrf_token\s+([a-f0-9\-]+)', l)
+                    if m: token = m.group(1)
+                if port and token:
+                    break
+
+        if port and token:
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+
+            url = f'https://127.0.0.1:{port}/exa.language_server_pb.LanguageServerService/JetboxWriteState'
+            payload = {
+                'userConfig': {
+                    'userSettings': {
+                        'themeMode': target_theme_mode,
+                        seed_key: {
+                            'background': bg,
+                            'primary': primary,
+                            'foregroundOverride': fg
+                        }
+                    }
+                }
+            }
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={
+                    'Content-Type': 'application/json',
+                    'Connect-Protocol-Version': '1',
+                    'X-Codeium-Csrf-Token': token
+                }
+            )
+            with urllib.request.urlopen(req, context=ctx, timeout=1.0) as resp:
+                pass
+except Exception:
+    pass
+" 2>/dev/null || true
+fi
+
 
 if [[ "$target_mode" == "dark" ]]; then
     gtk_theme="Adwaita-dark"
