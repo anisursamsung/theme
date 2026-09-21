@@ -20,11 +20,8 @@ output_path = '~/.config/theme/schemes/dark/dynamic-matugen/dunst.conf'
 input_path = '~/.config/theme/matugen/templates/gtk.css'
 output_path = '~/.config/theme/schemes/dark/dynamic-matugen/gtk.css'
 
-[templates.miqulauncher]
-input_path = '~/.config/theme/matugen/templates/miqulauncher.conf'
-output_path = '~/.config/theme/schemes/dark/dynamic-matugen/miqulauncher.conf'
 
-[templates.miqudesk]
-input_path = '~/.config/theme/matugen/templates/miqudesk.colors'
-output_path = '~/.config/theme/schemes/dark/dynamic-matugen/miqudesk.colors'
+[templates.miqutoolkit]
+input_path = '~/.config/theme/matugen/templates/miqutoolkit.conf'
+output_path = '~/.config/theme/schemes/dark/dynamic-matugen/miqutoolkit.conf'
 

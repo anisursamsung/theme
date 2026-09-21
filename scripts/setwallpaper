@@ -64,22 +64,19 @@ case "$FIT_MODE" in
 esac
 
 # ==========================================
-# 1. Apply wallpaper on the fly with miqubg
+# 1. Apply wallpaper on the fly with miqubg IPC
 # ==========================================
 mkdir -p "$(dirname "$WALLPAPER_FILE")"
 
-# Gracefully terminate previous wallpaper instances and ensure layer surfaces are released
-killall -q miqubg swaybg 2>/dev/null || true
-for _ in {1..20}; do
-    if ! pgrep -x "miqubg|swaybg" >/dev/null 2>&1; then
-        break
-    fi
-    sleep 0.05
-done
-
-# Launch miqubg immune to SIGHUP and fully detached from the calling session
-setsid nohup miqubg -i "$IMAGE_PATH" -m "$MIQU_MODE" >/dev/null 2>&1 &
-disown
+if pgrep -x "miqubg" >/dev/null 2>&1; then
+    # Send IPC command to the running daemon for a smooth double-surface slide
+    miqubg -i "$IMAGE_PATH" -m "$MIQU_MODE"
+else
+    # First launch: clean up legacy daemons and launch persistent miqubg daemon
+    killall -q swaybg 2>/dev/null || true
+    setsid nohup miqubg -i "$IMAGE_PATH" -m "$MIQU_MODE" >/dev/null 2>&1 &
+    disown
+fi
 
 # ==========================================
 # 2. Record active wallpaper

@@ -110,23 +110,16 @@ if [[ -f "$GTK_CUR" ]]; then
 fi
 touch "$HOME/.config/gtk-3.0/gtk.css" "$HOME/.config/gtk-4.0/gtk.css" 2>/dev/null || true
 
-# 5. miqulauncher Card Background
-MIQULAUNCHER_CUR="$CURRENT_DIR/miqulauncher.conf"
-if [[ -f "$MIQULAUNCHER_CUR" ]]; then
-    if [[ "$val" -eq 100 ]]; then
-        sed -i -E "s/^(background[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2/" "$MIQULAUNCHER_CUR"
-    else
-        sed -i -E "s/^(background[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2${alpha_hex}/" "$MIQULAUNCHER_CUR"
-    fi
-fi
 
-# 6. miqudesk Card Background
-MIQUDESK_CUR="$CURRENT_DIR/miqudesk.colors"
-if [[ -f "$MIQUDESK_CUR" ]]; then
+# 7. miqutoolkit Canvas & Surface
+MIQUTOOLKIT_CUR="$CURRENT_DIR/miqutoolkit.conf"
+if [[ -f "$MIQUTOOLKIT_CUR" ]]; then
     if [[ "$val" -eq 100 ]]; then
-        sed -i -E "s/^(@bg[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2/" "$MIQUDESK_CUR"
+        sed -i -E "s/^(background[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2/" "$MIQUTOOLKIT_CUR"
+        sed -i -E "s/^(surface[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2/" "$MIQUTOOLKIT_CUR"
     else
-        sed -i -E "s/^(@bg[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2${alpha_hex}/" "$MIQUDESK_CUR"
+        sed -i -E "s/^(background[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2${alpha_hex}/" "$MIQUTOOLKIT_CUR"
+        sed -i -E "s/^(surface[[:space:]]*=[[:space:]]*)(#[0-9a-fA-F]{6})[0-9a-fA-F]{0,2}/\1\2${alpha_hex}/" "$MIQUTOOLKIT_CUR"
     fi
 fi
 

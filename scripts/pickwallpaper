@@ -40,10 +40,10 @@ if [[ ! -d "$WALLPAPER_DIR" ]]; then
     NOTIFY_COLOR="rgb(ff5555)"
     NOTIFY_MSG="Wallpaper Error: Directory not found: $WALLPAPER_DIR"
 else
-    # Step 1: Pick wallpaper using miqulauncher in dmenu mode
+    # Step 1: Pick wallpaper using miqulauncher in dmenu mode with visual image thumbnails
     wallpapers=()
     while IFS= read -r -d $'\0' f; do
-        wallpapers+=("$(basename "$f")")
+        wallpapers+=("$f")
     done < <(find "$WALLPAPER_DIR" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) -print0 | sort -z)
 
     if [[ ${#wallpapers[@]} -eq 0 ]]; then
@@ -51,7 +51,9 @@ else
         NOTIFY_COLOR="rgb(ff5555)"
         NOTIFY_MSG="Wallpaper Error: No image files found in $WALLPAPER_DIR"
     else
-        CHOSEN_WALLPAPER=$(printf "%s\n" "${wallpapers[@]}" | miqulauncher -dmenu -p "Select Wallpaper" || true)
+        CHOSEN_WALLPAPER=$(for f in "${wallpapers[@]}"; do
+            echo -en "$(basename "$f")\0icon\x1f${f}\n"
+        done | miqulauncher -dmenu -p "Select Wallpaper" -cell-size 140 -width 900 -height 550 || true)
 
         if [[ -n "${CHOSEN_WALLPAPER:-}" && -f "$WALLPAPER_DIR/$CHOSEN_WALLPAPER" ]]; then
             SELECTED_WALLPAPER="$WALLPAPER_DIR/$CHOSEN_WALLPAPER"
