@@ -1,72 +1,72 @@
 [manager]
-cwd = { fg = "#363600" }
-hovered = { bg = "#d7dbe3", fg = "#000000" }
-preview_hovered = { bg = "#eff3fb" }
+cwd = { fg = "#203b00" }
+hovered = { bg = "#d8ddcb", fg = "#000000" }
+preview_hovered = { bg = "#f0f5e2" }
 
-find_keyword = { fg = "#363600", bold = true }
-find_position = { fg = "#003758", italic = true }
+find_keyword = { fg = "#203b00", bold = true }
+find_position = { fg = "#003d26", italic = true }
 
-marker_copied = { fg = "#422c49", bg = "#755c7c" }
+marker_copied = { fg = "#1f3a20", bg = "#4f6c4e" }
 marker_cut = { fg = "#700005", bg = "#c32220" }
-marker_marked = { fg = "#363600", bg = "#676813" }
-marker_selected = { fg = "#003758", bg = "#3e688c" }
+marker_marked = { fg = "#203b00", bg = "#417100" }
+marker_selected = { fg = "#003d26", bg = "#376f53" }
 
-tab_active = { bg = "#363600", fg = "#ffffff", bold = true }
-tab_inactive = { bg = "#eff3fb", fg = "#242e37" }
+tab_active = { bg = "#203b00", fg = "#ffffff", bold = true }
+tab_inactive = { bg = "#f0f5e2", fg = "#292f22" }
 
 
-count_copied = { fg = "#ffffff", bg = "#755c7c" }
+count_copied = { fg = "#ffffff", bg = "#4f6c4e" }
 count_cut = { fg = "#ffffff", bg = "#c32220" }
-count_selected = { fg = "#ffffff", bg = "#676813" }
+count_selected = { fg = "#ffffff", bg = "#417100" }
 
 border_symbol = "│"
-border_style = { fg = "#414b55" }
+border_style = { fg = "#464c3e" }
 
 [status]
-normal = { bg = "#363600", fg = "#ffffff", bold = true }
-select = { bg = "#422c49", fg = "#ffffff", bold = true }
+normal = { bg = "#203b00", fg = "#ffffff", bold = true }
+select = { bg = "#1f3a20", fg = "#ffffff", bold = true }
 unset = { bg = "#700005", fg = "#ffffff", bold = true }
 progress_label = { fg = "#000000", bold = true }
-progress_normal = { fg = "#363600", bg = "#f7f9ff" }
-progress_error = { fg = "#700005", bg = "#f7f9ff" }
+progress_normal = { fg = "#203b00", bg = "#f6fce8" }
+progress_error = { fg = "#700005", bg = "#f6fce8" }
 
 [mode]
-normal_main = { bg = "#363600", fg = "#ffffff", bold = true }
-normal_alt = { bg = "#d7dbe3", fg = "#363600" }
-select_main = { bg = "#422c49", fg = "#ffffff", bold = true }
-select_alt = { bg = "#d7dbe3", fg = "#422c49" }
+normal_main = { bg = "#203b00", fg = "#ffffff", bold = true }
+normal_alt = { bg = "#d8ddcb", fg = "#203b00" }
+select_main = { bg = "#1f3a20", fg = "#ffffff", bold = true }
+select_alt = { bg = "#d8ddcb", fg = "#1f3a20" }
 unset_main = { bg = "#700005", fg = "#ffffff", bold = true }
-unset_alt = { bg = "#d7dbe3", fg = "#700005" }
+unset_alt = { bg = "#d8ddcb", fg = "#700005" }
 
 [input]
-border = { fg = "#363600" }
-title = { fg = "#363600" }
+border = { fg = "#203b00" }
+title = { fg = "#203b00" }
 value = { fg = "#000000" }
-selected = { bg = "#676813" }
+selected = { bg = "#417100" }
 
 [select]
-border = { fg = "#363600" }
-active = { fg = "#363600", bold = true }
-inactive = { fg = "#242e37" }
+border = { fg = "#203b00" }
+active = { fg = "#203b00", bold = true }
+inactive = { fg = "#292f22" }
 
 [tasks]
-border = { fg = "#363600" }
-title = { fg = "#363600" }
-hovered = { bg = "#d7dbe3", fg = "#000000" }
+border = { fg = "#203b00" }
+title = { fg = "#203b00" }
+hovered = { bg = "#d8ddcb", fg = "#000000" }
 
 [which]
-mask = { bg = "#eff3fb" }
-cand = { fg = "#363600" }
-rest = { fg = "#242e37" }
+mask = { bg = "#f0f5e2" }
+cand = { fg = "#203b00" }
+rest = { fg = "#292f22" }
 desc = { fg = "#000000" }
-separator_style = { fg = "#414b55" }
+separator_style = { fg = "#464c3e" }
 
 [help]
-on = { fg = "#363600" }
-exec = { fg = "#003758" }
+on = { fg = "#203b00" }
+exec = { fg = "#003d26" }
 desc = { fg = "#000000" }
-hovered = { bg = "#d7dbe3", bold = true }
-footer = { bg = "#f7f9ff", fg = "#000000" }
+hovered = { bg = "#d8ddcb", bold = true }
+footer = { bg = "#f6fce8", fg = "#000000" }
 
 [filetree]
-folder = { fg = "#363600" }
+folder = { fg = "#203b00" }
